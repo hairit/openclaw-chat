@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { sendMessage } from "../services/openclawApi";
 
 interface Message {
   id: string;
@@ -6,12 +7,20 @@ interface Message {
   text: string;
 }
 
+interface ConversationMessage {
+  role: "user" | "assistant";
+  content: string;
+}
+
 export default function Chat() {
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputValue, setInputValue] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const conversationHistoryRef = useRef<ConversationMessage[]>([]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -33,33 +42,74 @@ export default function Chat() {
     adjustTextareaHeight();
   };
 
-  const handleSendMessage = () => {
-    if (inputValue.trim() === "") return;
+  const handleSendMessage = async () => {
+    if (inputValue.trim() === "" || isLoading) return;
+
+    const userText = inputValue.trim();
 
     // Add user message
     const userMessage: Message = {
       id: Date.now().toString(),
       type: "user",
-      text: inputValue,
+      text: userText,
     };
 
     setMessages((prev) => [...prev, userMessage]);
     setInputValue("");
+    setError(null);
+    setIsLoading(true);
 
     // Reset textarea height
     if (textareaRef.current) {
       textareaRef.current.style.height = "auto";
     }
 
-    // Simulate response from server/API
-    setTimeout(() => {
+    // Add to conversation history
+    conversationHistoryRef.current.push({
+      role: "user",
+      content: userText,
+    });
+
+    try {
+      // Call OpenClaw API
+      const response = await sendMessage(
+        userText,
+        conversationHistoryRef.current.slice(0, -1),
+      );
+
+      // Add assistant response to conversation history
+      conversationHistoryRef.current.push({
+        role: "assistant",
+        content: response,
+      });
+
+      // Add response message to UI
       const responseMessage: Message = {
         id: (Date.now() + 1).toString(),
         type: "response",
-        text: "This is a response message. Replace this with actual API call.",
+        text: response,
       };
+
       setMessages((prev) => [...prev, responseMessage]);
-    }, 500);
+    } catch (err) {
+      const errorMessage =
+        err instanceof Error ? err.message : "Failed to get response";
+      setError(errorMessage);
+
+      // Add error message to UI
+      const errorResponseMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        type: "response",
+        text: `Error: ${errorMessage}`,
+      };
+
+      setMessages((prev) => [...prev, errorResponseMessage]);
+
+      // Remove the failed user message from conversation history
+      conversationHistoryRef.current.pop();
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -117,6 +167,11 @@ export default function Chat() {
                   <p>Start a conversation by typing a message below</p>
                 </div>
               )}
+              {error && (
+                <div className="chat-error">
+                  <p>{error}</p>
+                </div>
+              )}
               {messages.map((message) => (
                 <div key={message.id} className={`message ${message.type}`}>
                   {message.type === "response" && (
@@ -125,6 +180,18 @@ export default function Chat() {
                   <div className="message-bubble">{message.text}</div>
                 </div>
               ))}
+              {isLoading && (
+                <div className="message response">
+                  <div className="message-avatar">🤖</div>
+                  <div className="message-bubble message-loading">
+                    <span className="loading-dots">
+                      <span>.</span>
+                      <span>.</span>
+                      <span>.</span>
+                    </span>
+                  </div>
+                </div>
+              )}
               <div ref={messagesEndRef} />
             </div>
 
@@ -137,13 +204,14 @@ export default function Chat() {
                 onChange={handleInputChange}
                 onKeyPress={handleKeyPress}
                 rows={1}
+                disabled={isLoading}
               />
               <button
                 className="send-btn"
                 onClick={handleSendMessage}
-                disabled={inputValue.trim() === ""}
+                disabled={inputValue.trim() === "" || isLoading}
               >
-                Send
+                {isLoading ? "Sending..." : "Send"}
               </button>
             </div>
           </div>
