@@ -101,7 +101,7 @@ export default function Chat() {
             <div className="chat-header">
               <div className="header-content">
                 <div className="bot-avatar">🤖</div>
-                <h3>OpenClaw Bot</h3>
+                {/* <h3>FXMedia Assistant</h3> */}
               </div>
               <button
                 className="close-btn"
