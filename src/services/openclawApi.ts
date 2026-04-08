@@ -26,7 +26,7 @@ interface ChatCompletionResponse {
 }
 
 const GATEWAY_URL = import.meta.env.VITE_OPENCLAW_GATEWAY_URL;
-const GATEWAY_TOKEN = "openclaw-chat";
+const GATEWAY_TOKEN = import.meta.env.VITE_OPENCLAW_GATEWAY_TOKEN;
 const MODEL = import.meta.env.VITE_OPENCLAW_MODEL;
 
 if (!GATEWAY_URL || !GATEWAY_TOKEN || !MODEL) {
@@ -49,7 +49,7 @@ export async function sendMessage(
 
   try {
     const response = await fetch(
-      `${GATEWAY_URL || "http://127.0.0.1:18789"}/v1/chat/completions`,
+      `${GATEWAY_URL}/v1/chat/completions`,
       {
         method: "POST",
         headers: {
