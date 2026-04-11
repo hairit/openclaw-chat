@@ -25,10 +25,11 @@ interface ChatCompletionResponse {
   };
 }
 
+const GATEWAY_URL = import.meta.env.VITE_OPENCLAW_GATEWAY_URL;
 const GATEWAY_TOKEN = import.meta.env.VITE_OPENCLAW_GATEWAY_TOKEN;
 const MODEL = import.meta.env.VITE_OPENCLAW_MODEL;
 
-if (!GATEWAY_TOKEN || !MODEL) {
+if (!GATEWAY_URL || !GATEWAY_TOKEN || !MODEL) {
   console.warn("OpenClaw environment variables are not fully configured");
 }
 
@@ -47,7 +48,7 @@ export async function sendMessage(
   };
 
   try {
-    const response = await fetch(`/api/v1/chat/completions`, {
+    const response = await fetch(`${GATEWAY_URL}/v1/chat/completions`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
